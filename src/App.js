@@ -24,7 +24,7 @@ const particleOptions = {
 const initialState = {
   input: '',
   imageUrl: '',
-  box: {},
+  boxList: [],
   route: 'signIn',
   isSignedIn: false,
   user: {
@@ -42,7 +42,7 @@ class App extends Component {
   	this.state = {
   		input: '',
   		imageUrl: '',
-  		box: {},
+      boxList: [],
       route: 'signIn',
       isSignedIn: false,
       user: {
@@ -75,11 +75,39 @@ class App extends Component {
   		topRow: clarifaiFace.top_row * height,
   		rightCol: width - (clarifaiFace.right_col * width),
   		bottomRow: height - (clarifaiFace.bottom_row * height)
-  	}
+     }
+}
+
+  calculateFaceLocationMulti = (data) => {
+    //array to return face boxes
+    let boxList = [];
+
+    //grab regions from api call
+    let faceRegions = data.outputs[0].data.regions;
+    
+    //get image dimensions to position boxes
+    let image = document.getElementById('inputImage');
+    let width = Number(image.width);
+    let height = Number(image.height);
+
+    //for each face, return an object with 4 points in boxList
+    faceRegions.map(face => {
+       let boxInfo = face.region_info.bounding_box;
+       let newBox = {
+        leftCol: boxInfo.left_col * width,
+        topRow: boxInfo.top_row * height,
+        rightCol: width - (boxInfo.right_col * width),
+        bottomRow: height - (boxInfo.bottom_row * height)        
+      };
+      boxList.push(newBox);
+      return(newBox);
+    });
+    //returns an array of the bounding boxes to be drawn in FaceRecognition.js
+    return boxList;
   }
 
-  displayFaceBox = (box) => {
-  	this.setState({box: box});
+  displayFaceBox = (boxList) => {
+    this.setState({boxList: boxList});
   }
 
   onInputChange = (event) => {
@@ -111,7 +139,7 @@ class App extends Component {
       })
       .catch(console.log);
       }
-      this.displayFaceBox(this.calculateFaceLocation(response))
+      this.displayFaceBox(this.calculateFaceLocationMulti(response));
 	  })
     .catch(err => console.log(err));
   }
@@ -126,7 +154,7 @@ class App extends Component {
   }
 
   render() {
-    const { isSignedIn, imageUrl, route, box } = this.state;
+    const { isSignedIn, imageUrl, route, boxList } = this.state;
 	  	return (
 	    <div className="App">
 	    	 <Particles className='particles'
@@ -140,7 +168,7 @@ class App extends Component {
             <ImageLinkForm 
               onInputChange={this.onInputChange} 
               onButtonSubmit={this.onButtonSubmit}/>
-            <FaceRecognition box={box} imageUrl={imageUrl}/>
+            <FaceRecognition boxList={boxList} imageUrl={imageUrl}/>
          </div>
         : (
             route === 'signIn' ?
